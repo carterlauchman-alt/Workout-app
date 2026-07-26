@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Elite PPL Workout Tracker</title>
+    <style>
+        :root {
+            --bg-color: #121212;
+            --card-bg: #1e1e1e;
+            --accent-color: #00adb5;
+            --text-color: #eeeeee;
+            --muted-text: #888888;
+            --border-color: #333333;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 600px;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 25px;
+        }
+
+        h1 {
+            color: var(--accent-color);
+            margin-bottom: 5px;
+            font-size: 1.8rem;
+        }
+
+        .nav-controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: var(--card-bg);
+            padding: 10px 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border: 1px solid var(--border-color);
+        }
+
+        .nav-controls input[type="date"] {
+            background: #2a2a2a;
+            border: 1px solid var(--border-color);
+            color: var(--text-color);
+            padding: 8px;
+            border-radius: 5px;
+            font-size: 1rem;
+        }
+
+        .btn {
+            background-color: var(--accent-color);
+            color: #fff;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        .btn:hover {
+            opacity: 0.9;
+        }
+
+        .workout-title-banner {
+            background: #252525;
+            padding: 12px;
+            border-radius: 8px;
+            text-align: center;
+            font-weight: bold;
+            font-size: 1.2rem;
+            color: var(--accent-color);
+            margin-bottom: 15px;
+            border: 1px solid var(--border-color);
+        }
+
+        .exercise-card {
+            background: var(--card-bg);
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 15px;
+            border: 1px solid var(--border-color);
+        }
+
+        .exercise-name {
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-bottom: 12px;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 5px;
+        }
+
+        .set-row {
+            display: flex;
+            align-items: center;
+            margin-bottom: 8px;
+            font-size: 0.95rem;
+        }
+
+        .set-number {
+            width: 50px;
+            color: var(--muted-text);
+        }
+
+        .input-group {
+            display: flex;
+            gap: 10px;
+            flex-grow: 1;
+        }
+
+        .input-group input {
+            width: 100%;
+            background: #2a2a2a;
+            border: 1px solid var(--border-color);
+            color: var(--text-color);
+            padding: 8px;
+            border-radius: 5px;
+            text-align: center;
+            font-size: 1rem;
+        }
+
+        .input-group input:focus {
+            border-color: var(--accent-color);
+            outline: none;
+        }
+
+        .save-banner {
+            position: fixed;
+            bottom: 20px;
+            background: #2e7d32;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 30px;
+            font-weight: bold;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+            display: none;
+            animation: fadeInOut 2s ease-in-out;
+        }
+
+        @keyframes fadeInOut {
+            0% { opacity: 0; transform: translateY(20px); }
+            15% { opacity: 1; transform: translateY(0); }
+            85% { opacity: 1; transform: translateY(0); }
+            100% { opacity: 0; transform: translateY(20px); }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <h1>Elite Tracker</h1>
+        <div style="color: var(--muted-text); font-size: 0.9rem;">Your Body, Perfected</div>
+    </header>
+
+    <div class="nav-controls">
+        <button class="btn" id="btn-prev">⬅️</button>
+        <input type="date" id="date-picker">
+        <button class="btn" id="btn-next">➡️</button>
+    </div>
+
+    <div id="workout-day-label" class="workout-title-banner">Loading Schedule...</div>
+
+    <div id="exercises-container"></div>
+
+    <div style="text-align: center; margin-top: 20px; margin-bottom: 40px;">
+        <button class="btn" id="btn-save" style="width: 100%; padding: 12px; font-size: 1.1rem;">💾 Save Today's Log</button>
+    </div>
+</div>
+
+<div id="toast" class="save-banner">Log Auto-Saved!</div>
+
+<script>
+    // Master PPL Schedule Routine matching your custom split
+    const routineSchedule = {
+        1: { name: "Monday: Push A (Chest Emphasis)", exercises: [
+            { name: "Incline Dumbbell Bench Press", sets: 3 },
+            { name: "Flat Barbell Bench Press", sets: 3 },
+            { name: "Cable Chest Flies", sets: 3 },
+            { name: "Dumbbell Lateral Raises", sets: 4 },
+            { name: "Overhead Cable Tricep Extensions", sets: 3 }
+        ]},
+        2: { name: "Tuesday: Pull A (Width & Climbing)", exercises: [
+            { name: "Wide-Grip Pull-Ups (or Lat Pulldowns)", sets: 4 },
+            { name: "Lat Pulldowns (Neutral Grip)", sets: 3 },
+            { name: "Barbell Bicep Curls", sets: 3 },
+            { name: "Barbell Wrist Curls", sets: 3 },
+            { name: "Plate Pinches", sets: 3, placeholderWeight: "sec", placeholderReps: "sec" }
+        ]},
+        3: { name: "Wednesday: Legs A (Quad Emphasis)", exercises: [
+            { name: "Barbell Back Squats", sets: 3 },
+            { name: "Leg Press", sets: 3 },
+            { name: "Leg Extensions", sets: 3 },
+            { name: "Seated Leg Curls", sets: 3 },
+            { name: "Standing Calf Raises", sets: 4 }
+        ]},
+        4: { name: "Thursday: Push B (Shoulder Emphasis)", exercises: [
+            { name: "Standing Overhead Press", sets: 3 },
+            { name: "Incline Barbell Bench Press", sets: 3 },
+            { name: "Dumbbell Lateral Raises (Drop Sets)", sets: 4 },
+            { name: "Incline Dumbbell Flies", sets: 3 },
+            { name: "Cable Tricep Pushdowns", sets: 3 }
+        ]},
+        5: { name: "Friday: Pull B (Thickness & Arms)", exercises: [
+            { name: "Chest-Supported Dumbbell Rows", sets: 3 },
+            { name: "Seated Cable Rows", sets: 3 },
+            { name: "Incline Dumbbell Curls", sets: 3 },
+            { name: "Hammer Curls", sets: 3 },
+            { name: "Face Pulls", sets: 3 }
+        ]},
+        6: { name: "Saturday: Legs B (Hamstring & Core)", exercises: [
+            { name: "Romanian Deadlifts (RDLs)", sets: 3 },
+            { name: "Dumbbell Walking Lunges", sets: 3, placeholderReps: "steps" },
+            { name: "Lying Leg Curls", sets: 3 },
+            { name: "Hanging Leg Raises", sets: 3, noWeight: true },
+            { name: "Deadbugs", sets: 3, noWeight: true }
+        ]},
+        0: { name: "Sunday: Full Rest Day", exercises: [] }
+    };
+
+    const datePicker = document.getElementById('date-picker');
+    const workoutLabel = document.getElementById('workout-day-label');
+    const container = document.getElementById('exercises-container');
+    const toast = document.getElementById('toast');
+
+    // Set layout initialization to current calendar date
+    let currentDate = new Date();
+    
+    function formatDate(date) {
+        let d = new Date(date),
+            month = '' + (d.getMonth() + 1),
+            day = '' + d.getDate(),
+            year = d.getFullYear();
+
+        if (month.length < 2) month = '0' + month;
+        if (day.length < 2) day = '0' + day;
+
+        return [year, month, day].join('-');
+    }
+
+    datePicker.value = formatDate(currentDate);
+
+    // Render the proper template dynamically based on selected date
+    function renderLogs() {
+        const selectedDateStr = datePicker.value;
+        const parsedDate = new Date(selectedDateStr + 'T00:00:00');
+        const dayOfWeek = parsedDate.getDay();
+        const dailyRoutine = routineSchedule[dayOfWeek];
+
+        workoutLabel.textContent = dailyRoutine.name;
+        container.innerHTML = '';
+
+        if (dailyRoutine.exercises.length === 0) {
+            container.innerHTML = `<div style="text-align:center; padding: 40px; color: var(--muted-text);">Enjoy your recovery! Growth happens during rest.</div>`;
+            return;
+        }
+
+        // Fetch saved data for specific date key if it exists
+        const savedData = JSON.parse(localStorage.getItem(selectedDateStr)) || {};
+
+        dailyRoutine.exercises.forEach((ex, exIndex) => {
+            const card = document.createElement('div');
+            card.className = 'exercise-card';
+
+            let h3 = document.createElement('div');
+            h3.className = 'exercise-name';
+            h3.textContent = ex.name;
+            card.appendChild(h3);
+
+            for (let i = 1; i <= ex.sets; i++) {
+                const row = document.createElement('div');
+                row.className = 'set-row';
+
+                const setNum = document.createElement('div');
+                setNum.className = 'set-number';
+                setNum.textContent = `Set ${i}`;
+                row.appendChild(setNum);
+
+                const inputGroup = document.createElement('div');
+                inputGroup.className = 'input-group';
+
+                // Unique data key attributes for tracking values
